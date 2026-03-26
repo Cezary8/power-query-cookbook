@@ -10,3 +10,11 @@ Table in query created based on code
         }
     )
 ```
+
+```
+= Table.FromList(
+        {Date.From( DateTime.LocalNow())},
+        Splitter.SplitByNothing(),
+        type table[Refresh date = Date.Type]//, null, ExtraValues.Error
+    )
+```
