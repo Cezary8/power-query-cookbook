@@ -3,17 +3,19 @@ Mechanism simillar to 'rank over partition by' used to count multiplications
 
 ## Snippet
 ```
-    #"Inserted Lowercased Text" = Table.AddColumn(#"Changed Type", "lowercase", each Text.Lower([department]), type text),
-    #"Grouped Rows" = Table.Group(#"Inserted Lowercased Text", {"lowercase"}, {{"Details", each _, type table [department=nullable text, lowercase=text]}}),
-    #"Sorted Rows" = Table.Sort(#"Grouped Rows",{{"lowercase", Order.Ascending}}),
-    #"Added Index" = Table.AddIndexColumn(#"Sorted Rows", "_rank", 1, 1, Int64.Type),
-    Custom1 = Table.ReplaceValue(#"Added Index",
-            each [_rank],
-            each if [lowercase] = "<inactive>" then 9998
-            else if [lowercase] = "<undefined>" then 9999
-            else [_rank] ,Replacer.ReplaceValue,{"_rank"}
-            ),
-    #"Changed Type1" = Table.TransformColumnTypes(Custom1,{{"_rank", Int64.Type}}),
-    #"Removed Columns" = Table.RemoveColumns(#"Changed Type1",{"lowercase"}),
-    #"Expanded Details" = Table.ExpandTableColumn(#"Removed Columns", "Details", {"department", "lowercase"}, {"department", "lowercase"})
+let
+    Source = Csv.Document(File.Contents("D:\praca\Savills\users.csv"),[Delimiter=",", Columns=5, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+    #"Changed Type" = Table.TransformColumnTypes(Source,{{"Column1", type text}, {"Column2", type text}, {"Column3", type text}, {"Column4", type text}, {"Column5", type text}}),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Changed Type", [PromoteAllScalars=true]),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Promoted Headers",{{"display_name", type text}, {"email_address", type text}, {"country", type text}, {"office_location", type text}, {"department", type text}}),
+    #"Sorted Rows" = Table.Sort(#"Changed Type1",{{"email_address", Order.Ascending}, {"country", Order.Descending}}),
+    #"Grouped Rows" = Table.Group(#"Sorted Rows", {"email_address"}, {{"Count", each _, type table [display_name=nullable text, email_address=nullable text, country=nullable text, office_location=nullable text, department=nullable text]}}),
+    #"Added Custom" = Table.AddColumn(#"Grouped Rows", "Custom", each Table.AddIndexColumn([Count],"Rank",1,1)),
+    #"Removed Other Columns" = Table.SelectColumns(#"Added Custom",{"Custom"}),
+    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Other Columns", "Custom", {"display_name", "email_address", "country", "office_location", "department", "Rank"}, {"display_name", "email_address", "country", "office_location", "department", "Rank"}),
+    #"Changed Type2" = Table.TransformColumnTypes(#"Expanded Custom",{{"display_name", type text}, {"email_address", type text}, {"country", type text}, {"office_location", type text}, {"department", type text}, {"Rank", Int64.Type}}),
+    #"Filtered Rows" = Table.SelectRows(#"Changed Type2", each [Rank] = 1),
+    #"Removed Columns" = Table.RemoveColumns(#"Filtered Rows",{"Rank"})
+in
+    #"Removed Columns"
 ```
